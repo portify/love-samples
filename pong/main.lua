@@ -1,10 +1,24 @@
+-- Excercises:
+--  - Reduce repetition in some parts by either moving to functions or just by
+--    restructuring certain sections
+--  - Make some of the below constants configurable in-game
+--  - Mouse-controlled paddle
+--  - Spice up the graphics with colors, sprites and custom fonts
+--  - Add some more liveliness to the AI paddle
+--  - Add a main menu (restructure the game into multiple states)
+--  - Make the ball bounce off of the top/bottom of paddles for that
+--    final disappointment as you barely miss
+--  - Make the game DPI and/or resolution independent
+
+local USE_AI_PLAYER_2 = true
+
 local WIN_DEATH_COUNT = 10
 local WIN_PAUSE_TIME = 1
 local DEATH_PAUSE_TIME = 0.5
 
 local BALL_SIZE = 20
-local BALL_SPEED_INITIAL = 100
-local BALL_SPEED_BOUNCED = 1.1
+local BALL_SPEED_INITIAL = 150
+local BALL_SPEED_BOUNCED = 1.05
 
 local PADDLE_WIDTH = 20
 local PADDLE_HEIGHT = 150
@@ -14,7 +28,7 @@ local player1, player2, ball
 local pause_time, pause_func
 
 local function reset_ball()
-  local width, height = love.window.fromPixels(love.graphics.getDimensions())
+  local width, height = love.graphics.getDimensions()
 
   ball = {
     x = width / 2,
@@ -25,7 +39,7 @@ local function reset_ball()
 end
 
 local function reset_game()
-  local width, height = love.window.fromPixels(love.graphics.getDimensions())
+  local width, height = love.graphics.getDimensions()
 
   pause_time = nil
   pause_func = nil
@@ -52,16 +66,41 @@ function love.update(dt)
     end
   end
 
+  -- This section could be improved a lot as there's a lot of repetition
+  -- See the excercises at the top of this file
+
   local width, height = love.window.fromPixels(love.graphics.getDimensions())
   local dir
 
   -- Player 1 input
-  dir =
-    (love.keyboard.isDown("down") and  1 or 0) +
-    (love.keyboard.isDown("up"  ) and -1 or 0)
+  dir = 0
+
+  if love.keyboard.isDown("down") then dir = dir + 1 end
+  if love.keyboard.isDown("up"  ) then dir = dir - 1 end
 
   player1.paddle = player1.paddle + dir * PADDLE_SPEED * dt
   player1.paddle = math.max(0, math.min(height - PADDLE_HEIGHT, player1.paddle))
+
+  -- Player 2 input
+  if USE_AI_PLAYER_2 then
+    local reference = player2.paddle + PADDLE_HEIGHT / 2
+
+    if ball.y < reference then
+      dir = -1
+    elseif ball.y > reference then
+      dir = 1
+    else
+      dir = 0
+    end
+  else
+    dir = 0
+
+    if love.keyboard.isDown("s") then dir = dir + 1 end
+    if love.keyboard.isDown("w") then dir = dir - 1 end
+  end
+
+  player2.paddle = player2.paddle + dir * PADDLE_SPEED * dt
+  player2.paddle = math.max(0, math.min(height - PADDLE_HEIGHT, player2.paddle))
 
   -- For seeing if we just entered a paddle
   local old_x = ball.x
@@ -74,8 +113,6 @@ function love.update(dt)
     ball.y = ball.y - ball.vely * dt
     ball.vely = ball.vely * -1
   end
-
-  -- This part could be improved a lot
 
   -- Bounce off of paddles
   if old_x >= PADDLE_WIDTH and ball.x < PADDLE_WIDTH then
